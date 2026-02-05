@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Merge PDF files</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fc;
+      text-align: center;
+      padding: 60px 20px;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #555;
+      font-size: 18px;
+    }
+    .upload-box {
+      margin-top: 40px;
+      padding: 40px;
+      border: 2px dashed #dc3545;
+      border-radius: 8px;
+      background: #fff;
+      display: inline-block;
+      width: 100%;
+      max-width: 600px;
+    }
+    input[type="file"],
+    select,
+    button {
+      margin: 15px auto;
+      display: block;
+      font-size: 16px;
+      padding: 10px 20px;
+      border-radius: 6px;
+    }
+    input[type="file"] {
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #dc3545;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #b82e36;
+    }
+    #fileList {
+      margin-top: 10px;
+      text-align: left;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    #fileList p {
+      margin: 5px;
+      font-size: 14px;
+    }
+    .file-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .file-entry button {
+      background-color: #888;
+      font-size: 12px;
+      padding: 5px 10px;
+    }
+  </style>
+</head>
+<body style="background-color: lightblue;">
+
+  <h1><marquee direction="lef" scrollamount="5">Standalone application To Merge / Transform Portable Document File(PDF)</marquee></h1>
+
+  <div class="upload-box" id="dropArea">
+    <form id="pdfForm" method="POST" enctype="multipart/form-data">
+      <input type="file" id="fileInput" accept="application/pdf"><br>
+      <div id="fileList"></div>
+
+      <label for="font">Choose a font for merged PDF:</label>
+      <select name="font" id="font">
+        <option value="Times-Roman">Times-Roman</option>
+        <option value="Times-Italic">Times-Italic</option>
+        <option value="Courier">Courier</option>
+        <option value="Courier-Bold">Courier-Bold</option>
+        <option value="Helvetica">Helvetica</option>
+        <option value="Helvetica-Oblique">Helvetica-Oblique</option>
+      </select><br>
+
+      <!-- Hidden input to pass action type -->
+      <input type="hidden" name="action" id="actionType">
+
+      <!-- Action buttons -->
+      <button type="button" onclick="submitAction('transform')">Transform PDF</button>
+      <button type="button" onclick="submitAction('merge')">Merge PDFs</button>
+      <button type="button" onclick="location.reload()">Refresh</button>
+    </form>
+  </div>
+
+  <script>
+    const dropBox = document.querySelector('.upload-box');
+    const fileInput = document.getElementById('fileInput');
+    const fileListContainer = document.getElementById('fileList');
+    const form = document.getElementById('pdfForm');
+    let selectedFiles = [];
+
+    dropBox.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropBox.style.borderColor = '#888';
+    });
+
+    dropBox.addEventListener('dragleave', () => {
+      dropBox.style.borderColor = '#dc3545';
+    });
+
+    dropBox.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropBox.style.borderColor = '#dc3545';
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      droppedFiles.forEach(file => addFile(file));
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) addFile(file);
+      fileInput.value = '';
+    });
+
+    function addFile(file) {
+      if (file.type !== 'application/pdf') return;
+      if (selectedFiles.find(f => f.name === file.name)) {
+        alert("This file has already been added.");
+        return;
+      }
+      selectedFiles.push(file);
+      updateFileList();
+    }
+
+    function updateFileList() {
+      fileListContainer.innerHTML = '';
+      selectedFiles.forEach((file, index) => {
+        const p = document.createElement('p');
+        p.className = 'file-entry';
+
+        const span = document.createElement('span');
+        span.textContent = file.name;
+
+        const btn = document.createElement('button');
+        btn.textContent = 'Delete';
+        btn.onclick = () => {
+          selectedFiles.splice(index, 1);
+          updateFileList();
+        };
+
+        p.appendChild(span);
+        p.appendChild(btn);
+        fileListContainer.appendChild(p);
+      });
+    }
+
+    function submitAction(type) {
+      document.getElementById('actionType').value = type;
+
+      if (selectedFiles.length === 0) {
+        alert("Please select at least one PDF.");
+        return;
+      }
+
+      if (type === "transform" && selectedFiles.length !== 1) {
+        alert("Please select exactly one PDF to transform.");
+        return;
+      }
+
+      if (type === "merge" && selectedFiles.length < 2) {
+        alert("Please select at least two PDFs to merge.");
+        return;
+      }
+
+      const formData = new FormData(form);
+      selectedFiles.forEach(file => formData.append('pdfs', file));
+
+      fetch('/', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.text())
+      .then(html => {
+        document.body.innerHTML = html;
+      })
+      .catch(err => alert("Error uploading PDFs: " + err));
+    }
+  </script>
+</body>
+</html>
